@@ -104,7 +104,6 @@ public class BlockServlet implements Servlet {
 		return blockPath;
 	}
 
-	@SuppressWarnings("unchecked")
 	private void handleMultipartContent(ServletRequest servletRequest,
 			BlockContext context) {
 		
