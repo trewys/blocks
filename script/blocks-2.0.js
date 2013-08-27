@@ -1,3 +1,20 @@
+ /*
+ * Copyright 2012 trewys GmbH
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
+
 var Blocks = {
 	Context: {
 		path: ""
@@ -97,6 +114,55 @@ var Blocks = {
 		handleError: function(errorData) {
 //			if (data.errorState == 4 && tBlocks.defaultRtcHandler["ERROR"])
 //				tBlocks.defaultRtcHandler["ERROR"]();
+		}
+	},
+	JSON: {
+		post: function (url, dataArray, onPostedFunction) {
+			var dataString = null;
+			jQuery.each(dataArray, function(key, value) {
+				if (value != null) {
+					if (!dataString)
+						dataString = key + "=" + Blocks.Request.encodeUrl(value);
+					else
+						dataString = dataString + "&" + key + "=" + Blocks.Request.encodeUrl(value);
+				}
+			});
+			
+			jQuery.ajax({
+				url: url,
+				type: 'POST',
+				dataType: "json",
+				data: dataString,
+				cache: false,
+				success: function(response) {
+					if (onPostedFunction)
+						onPostedFunction(response);
+				},
+				error: function (data) {
+					Blocks.JSON.handleError(data);
+				}
+			});
+		},
+		load: function (url, onLoadedFunction) {
+			
+			$.ajax({
+				url: url,
+				type: 'GET',
+				dataType: "json",
+				timeout: 8000,
+				cache: false,
+				success: function(response) {
+					if (onLoadedFunction)
+						onLoadedFunction(response);
+				},
+				error: function (response, status, error) {
+					console.log(error);
+					Blocks.JSON.handleError(response);
+				}
+			});
+		},
+		handleError: function(response) {
+			//TODO
 		}
 	},
 	//@deprecated AjaxHelper
