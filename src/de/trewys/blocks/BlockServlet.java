@@ -18,12 +18,15 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import de.trewys.blocks.context.BlockContext;
+import de.trewys.blocks.logging.BlocksLogger;
 import de.trewys.blocks.writer.BlockWriter;
 import de.trewys.blocks.writer.ValidationBlockWriter;
 
 
 public class BlockServlet implements Servlet {
 
+	private static BlocksLogger logger;
+	
 	private ServletConfig servletConfig = null;
    
 	private boolean isDebug;
@@ -37,7 +40,6 @@ public class BlockServlet implements Servlet {
 		BlockConfig.getInstance().addBlock(
 				"/blocks/frame/script.block",
 				new FileForwardBlock("/html/script"));
-		
 	}
 
 	public void service(ServletRequest servletRequest, ServletResponse servletResponse)
@@ -62,38 +64,40 @@ public class BlockServlet implements Servlet {
 		
 		//Get Block
 		Block block = BlockConfig.getInstance().getBlock(blockPath);
-		
-//		try {
-			System.out.println(blockPath);
-			
-			if (block != null) {
-				
-				// Creating a new context (will be set to 'current context') as well 
-				BlockContext context = new BlockContext(
-						httpServletRequest,
-						(HttpServletResponse) servletResponse);
-				
-				try {
-					//if there are fileload...
-					handleMultipartContent(servletRequest, context);
 	
-					//create new instance
-					block = block.createBlock(context);
-					
-					// init -> work -> render
-					block.init(context);
-					block.work(context);
-					block.render(blockWriter);
-				} finally {
-					context.release();
-				}
-			} else {
-				System.out.println("BLOCK: '" + blockPath + "' not initialized!");
+		
+		
+		if (block != null) {
+			// Creating a new context (will be set to 'current context') as well 
+			BlockContext context = new BlockContext(
+					httpServletRequest,
+					(HttpServletResponse) servletResponse,
+					logger);
+			
+			if (logger != null) {
+				logger.onRequest(context, blockPath, block);
 			}
-//		} finally {
-			//close writer
-			blockWriter.close();
-//		}
+			try {
+				//if there are fileload...
+				handleMultipartContent(servletRequest, context);
+
+				//create new instance
+				block = block.createBlock(context);
+				
+				// init -> work -> render
+				block.init(context);
+				block.work(context);
+				block.render(blockWriter);
+			} finally {
+				context.release();
+			}
+		} else {
+			if (logger != null) {
+				logger.onBlockMissing(blockPath);
+			}
+		}
+		//close writer
+		blockWriter.close();
 	}
 
 	protected String getBlockPath(HttpServletRequest httpServletRequest) {
@@ -145,6 +149,14 @@ public class BlockServlet implements Servlet {
 
 	public String getServletInfo() {
 		 return (this.getClass().getName());
+	}
+
+	public static BlocksLogger getLogger() {
+		return logger;
+	}
+
+	public static void setLogger(BlocksLogger logger) {
+		BlockServlet.logger = logger;
 	}
 
 }

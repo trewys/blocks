@@ -15,6 +15,7 @@ import org.apache.commons.fileupload.FileItem;
 
 import de.trewys.blocks.Block;
 import de.trewys.blocks.BlockConfig;
+import de.trewys.blocks.logging.BlocksLogger;
 import de.trewys.blocks.writer.BlockWriter;
 
 public class BlockContext {
@@ -25,29 +26,36 @@ public class BlockContext {
         return instance.get();
     }
 
-    protected static void setCurrentInstance(BlockContext context) {
+    public static void setCurrentInstance(BlockContext context) {
         instance.set(context);
     }
     
     private HttpServletRequest request;
     private HttpServletResponse response;
+    private BlocksLogger logger;
     
     private Map<String, String> parameters;
     private boolean useRequestParamters = false;
     
     private Collection<FileItem> upload;
     
-    public BlockContext(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-    	this(servletRequest, servletResponse, new HashMap<String, String>());
+    public BlockContext(HttpServletRequest servletRequest, HttpServletResponse servletResponse, BlocksLogger logger) {
+    	this(servletRequest, servletResponse, logger, new HashMap<String, String>());
     	useRequestParamters = true;
     }
     
-    private BlockContext(HttpServletRequest servletRequest, HttpServletResponse servletResponse, Map<String, String> parameters) {
-    	System.out.println("CTX C");
+    private BlockContext(
+    		HttpServletRequest servletRequest, HttpServletResponse servletResponse,
+    		BlocksLogger logger,
+    		Map<String, String> parameters) {
     	setCurrentInstance(this);
     	this.request = servletRequest;
     	this.response = servletResponse;
+    	this.logger = logger;
     	this.parameters = parameters;
+    	if (logger != null) {
+    		logger.onContextCreated(this);
+    	}
     }
     
     public HttpServletResponse getResponse() {
@@ -74,21 +82,17 @@ public class BlockContext {
     }
     
     public String getParameter(String param) {
-    	System.out.print("PG: " + param + " = ");
-    	
+    	String value = null;
     	if (parameters.containsKey(param)) {
-    		System.out.println(parameters.get(param));
-    		return parameters.get(param);
+    		value = parameters.get(param);
+    	} else if (useRequestParamters) {
+	    	value = request.getParameter(param);
     	}
     	
-    	if (useRequestParamters) {
-	    	System.out.println(request.getParameter(param));
-
-	    	return request.getParameter(param);
-    	}
+    	if (logger != null)
+    		logger.onParameterGet(this, param, value);
     	
-    	System.out.println("null");
-    	return null;
+    	return value;
     }
 
     public Object getFormParameter(String param) {
@@ -111,7 +115,6 @@ public class BlockContext {
     
 
 	public void addParameter(String param, String value) {
-		System.out.println("PS: " + param + " = " + value);
     	parameters.put(param, value);
     }
 
@@ -205,15 +208,18 @@ public class BlockContext {
 	}
 	
 	public void release() {
-    	System.out.println("CTX Release");
+		if (logger != null) {
+			logger.onContextReleased(this);
+		}
     	
     	request = null;
     	response = null;
+    	logger = null;
     	setCurrentInstance(null);
     }
    
    public void handleSubBlock(String path, Map<String, String> parameters, BlockWriter writer) {
-	   BlockContext subBlockContext = new BlockContext(request, response, parameters);
+	   BlockContext subBlockContext = new BlockContext(request, response, logger, parameters);
 	   
 	   Block block = BlockConfig.getInstance().getBlock(path).createBlock(subBlockContext);
 	   block.init(subBlockContext);

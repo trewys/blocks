@@ -1,0 +1,64 @@
+<project name="trewys-blocks" default="dist" basedir=".">
+
+	<property name="app.name" value="${ant.project.name}" />
+	<property name="app.version" value="1.0" />
+
+	<property name="dir.working" location="./" />
+	<property name="dir.src" location="${dir.working}/src" />
+	<property name="dir.lib" location="${dir.working}/lib" />
+	<property name="dir.classes" location="${dir.working}/bin" />
+	<property name="dir.dist" value="${dir.working}/dist" />
+
+	<path id="classpath.base">
+		<pathelement path="${dir.lib}/commons-codec-1.7.jar" />
+		<pathelement path="${dir.lib}/commons-fileupload-1.2.1.jar" />
+		<pathelement path="${dir.lib}/commons-io-1.4.jar" />
+		<pathelement path="${dir.lib}/gson-2.2.1.jar" />
+		<pathelement path="${dir.lib}/servlet-api.jar" />
+		<pathelement path="${dir.lib}/velocity-1.7.jar" />
+	</path>
+	
+	<target name="clean" description="clean the project enviroment">
+		<delete dir="${dir.classes}" />
+		<delete verbose="true" dir="${dir.dist}" />
+		<mkdir dir="${dir.classes}" />
+		<mkdir dir="${dir.dist}" />
+	</target>
+
+	<target name="compile" depends="clean">
+		
+		<javac srcdir="${dir.src}" 
+			destdir="${dir.classes}" 
+			classpathref="classpath.base" 
+			source="1.5" 
+			debug="no" 
+			fork="yes" 
+			encoding="UTF-8"
+			deprecation="on" />
+           
+		<copy todir="${dir.classes}" verbose="false" overwrite="true" failonerror="false">
+
+			<fileset dir="${dir.src}">
+				<exclude name="**/*.java" />
+				<include name="**/*.xml" />
+				<include name="**/*.sql" />
+			</fileset>
+		</copy>
+	</target>
+
+	
+	<target name="dist" depends="compile">
+
+ 		<jar destfile="${dir.dist}/blocks.jar">
+ 			
+ 			<fileset dir="${dir.classes}">
+			</fileset>
+
+			<manifest>
+				<attribute name="Application" value="${app.name}" />
+				<attribute name="Version" value="${app.version}" />
+				<attribute name="Built-By" value="${user.name}" />
+			</manifest>
+		</jar>
+	</target>
+</project>
